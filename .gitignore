@@ -5,7 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+*.ipynb
 # Distribution / packaging
 .Python
 env/
@@ -92,4 +92,4 @@ ENV/
 .ropeproject
 
 # Data
-data/
+datasets/
