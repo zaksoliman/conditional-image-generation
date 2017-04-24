@@ -3,7 +3,7 @@
 #   + License: MIT
 # [2017-04-23] Modifications for image inpainting: Zack Soliman
 #   + License: MIT
-
+from __future__ import division
 import os
 import time
 import math
@@ -11,6 +11,7 @@ from glob import glob
 import tensorflow as tf
 import numpy as np
 from six.moves import xrange
+
 from ops import *
 from utils import *
 
