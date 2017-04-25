@@ -9,7 +9,6 @@ import math
 from glob import glob
 import tensorflow as tf
 import numpy as np
-from six.moves import xrange
 
 from ops import *
 from utils import *
@@ -161,51 +160,31 @@ class DCGAN(object):
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_size , self.z_dim))
         sample_files = data[0:self.sample_size]
-        sample = [get_image(sample_file, self.image_size, is_crop=self.is_crop) for sample_file in sample_files]
+        sample = load_images(sample_files)
         sample_images = np.array(sample).astype(np.float32)
 
         counter = 1
         start_time = time.time()
 
         if self.load(self.checkpoint_dir):
-            print("""
-
-    ======
-    An existing model was found in the checkpoint directory.
-    If you just cloned this repository, it's Brandon Amos'
-    trained model for faces that's used in the post.
-    If you want to train a new model from scratch,
-    delete the checkpoint directory or specify a different
-    --checkpoint_dir argument.
-    ======
-
-    """)
+            print(" [*] Load SUCCESS")
         else:
-            print("""
-
-    ======
-    An existing model was not found in the checkpoint directory.
-    Initializing a new one.
-    ======
-
-    """)
+            print(" [!] Load failed...")
 
         for epoch in range(config.epoch):
-            data = glob(os.path.join(config.dataset, "*.png"))
+            data = glob(os.path.join(config.dataset, "*.jpg"))
             batch_idxs = min(len(data), config.train_size) // self.batch_size
 
             for idx in range(0, batch_idxs):
                 batch_files = data[idx*config.batch_size:(idx+1)*config.batch_size]
-                batch = [get_image(batch_file, self.image_size, is_crop=self.is_crop)
-                            for batch_file in batch_files]
-                batch_images = np.array(batch).astype(np.float32)
+                batch = load_images(batch_files)
 
                 batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
                             .astype(np.float32)
 
                 # Update D network
                 _, summary_str = self.sess.run([d_optim, self.d_sum],
-                    feed_dict={ self.images: batch_images, self.z: batch_z })
+                    feed_dict={ self.images: batch, self.z: batch_z })
                 self.writer.add_summary(summary_str, counter)
 
                 # Update G network
@@ -219,7 +198,7 @@ class DCGAN(object):
                 self.writer.add_summary(summary_str, counter)
 
                 errD_fake = self.d_loss_fake.eval({self.z: batch_z})
-                errD_real = self.d_loss_real.eval({self.images: batch_images})
+                errD_real = self.d_loss_real.eval({self.images: batch})
                 errG = self.g_loss.eval({self.z: batch_z})
 
                 counter += 1
@@ -238,7 +217,6 @@ class DCGAN(object):
 
                 if np.mod(counter, 500) == 2:
                     self.save(config.checkpoint_dir, counter)
-
 
   def discriminator(self, image, y=None, reuse=False):
     with tf.variable_scope("discriminator") as scope:
