@@ -17,8 +17,8 @@ import numpy as np
 from time import gmtime, strftime
 import os
 import pickle as pkl
-import glob
 import PIL.Image as Image
+from glob  import glob
 
 pp = pprint.PrettyPrinter()
 
@@ -26,8 +26,8 @@ get_stddev = lambda x, k_h, k_w: 1/math.sqrt(k_w*k_h*x.get_shape()[-1])
 
 datasets_path = "../../../dataset/coco/"
 
-train_path = os.join(datasets_path, "train2014")
-vaild_path = os.join(datasets_path, "val2014")
+train_path = os.path.join(datasets_path, "train2014")
+vaild_path = os.path.join(datasets_path, "val2014")
 
 def load_images(img_list):
     """Returns normalized batch"""
