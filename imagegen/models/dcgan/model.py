@@ -35,7 +35,6 @@ class DCGAN(object):
     """
     self.sess = sess
     self.is_crop = is_crop
-    self.is_grayscale = (c_dim == 1)
     self.model_name = "DCGAN.model"
 
     self.batch_size = batch_size
@@ -141,176 +140,105 @@ class DCGAN(object):
 
     self.saver = tf.train.Saver()
 
-  def train(self, config):
-    """Train DCGAN"""
-    d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
-              .minimize(self.d_loss, var_list=self.d_vars)
-    g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
-              .minimize(self.g_loss, var_list=self.g_vars)
-    try:
-      tf.global_variables_initializer().run()
-    except:
-      tf.initialize_all_variables().run()
 
-    self.g_sum = merge_summary([self.z_sum, self.d__sum,
-      self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
-    self.d_sum = merge_summary(
-        [self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
-    self.writer = SummaryWriter("./logs", self.sess.graph)
 
-    sample_z = np.random.uniform(-1, 1, size=(self.sample_num , self.z_dim))
+    def train(self, config):
+        data = glob(os.path.join(config.dataset, "*.jpeg"))
+        #np.random.shuffle(data)
+        assert(len(data) > 0)
 
-    if config.dataset == 'mnist':
-      sample_inputs = data_X[0:self.sample_num]
-      sample_labels = data_y[0:self.sample_num]
-    else:
-      sample_files = data[0:self.sample_num]
-      sample = [
-          get_image(sample_file,
-                    input_height=self.input_height,
-                    input_width=self.input_width,
-                    resize_height=self.output_height,
-                    resize_width=self.output_width,
-                    is_crop=self.is_crop,
-                    is_grayscale=self.is_grayscale) for sample_file in sample_files]
-      if (self.is_grayscale):
-        sample_inputs = np.array(sample).astype(np.float32)[:, :, :, None]
-      else:
-        sample_inputs = np.array(sample).astype(np.float32)
+        d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+                            .minimize(self.d_loss, var_list=self.d_vars)
+        g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+                            .minimize(self.g_loss, var_list=self.g_vars)
+        tf.global_variables_initializer().run()
 
-    counter = 1
-    start_time = time.time()
-    could_load, checkpoint_counter = self.load(self.checkpoint_dir)
-    if could_load:
-      counter = checkpoint_counter
-      print(" [*] Load SUCCESS")
-    else:
-      print(" [!] Load failed...")
+        self.g_sum = tf.merge_summary(
+            [self.z_sum, self.d__sum, self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
+        self.d_sum = tf.merge_summary(
+            [self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
+        self.writer = tf.train.SummaryWriter("./logs", self.sess.graph)
 
-    for epoch in xrange(config.epoch):
-      if config.dataset == 'mnist':
-        batch_idxs = min(len(data_X), config.train_size) // config.batch_size
-      else:      
-        data = glob(os.path.join(
-          "./data", config.dataset, self.input_fname_pattern))
-        batch_idxs = min(len(data), config.train_size) // config.batch_size
+        sample_z = np.random.uniform(-1, 1, size=(self.sample_size , self.z_dim))
+        sample_files = data[0:self.sample_size]
+        sample = [get_image(sample_file, self.image_size, is_crop=self.is_crop) for sample_file in sample_files]
+        sample_images = np.array(sample).astype(np.float32)
 
-      for idx in xrange(0, batch_idxs):
-        if config.dataset == 'mnist':
-          batch_images = data_X[idx*config.batch_size:(idx+1)*config.batch_size]
-          batch_labels = data_y[idx*config.batch_size:(idx+1)*config.batch_size]
+        counter = 1
+        start_time = time.time()
+
+        if self.load(self.checkpoint_dir):
+            print("""
+
+    ======
+    An existing model was found in the checkpoint directory.
+    If you just cloned this repository, it's Brandon Amos'
+    trained model for faces that's used in the post.
+    If you want to train a new model from scratch,
+    delete the checkpoint directory or specify a different
+    --checkpoint_dir argument.
+    ======
+
+    """)
         else:
-          batch_files = data[idx*config.batch_size:(idx+1)*config.batch_size]
-          batch = [
-              get_image(batch_file,
-                        input_height=self.input_height,
-                        input_width=self.input_width,
-                        resize_height=self.output_height,
-                        resize_width=self.output_width,
-                        is_crop=self.is_crop,
-                        is_grayscale=self.is_grayscale) for batch_file in batch_files]
-          if (self.is_grayscale):
-            batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
-          else:
-            batch_images = np.array(batch).astype(np.float32)
+            print("""
 
-        batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
-              .astype(np.float32)
+    ======
+    An existing model was not found in the checkpoint directory.
+    Initializing a new one.
+    ======
 
-        if config.dataset == 'mnist':
-          # Update D network
-          _, summary_str = self.sess.run([d_optim, self.d_sum],
-            feed_dict={ 
-              self.inputs: batch_images,
-              self.z: batch_z,
-              self.y:batch_labels,
-            })
-          self.writer.add_summary(summary_str, counter)
+    """)
 
-          # Update G network
-          _, summary_str = self.sess.run([g_optim, self.g_sum],
-            feed_dict={
-              self.z: batch_z, 
-              self.y:batch_labels,
-            })
-          self.writer.add_summary(summary_str, counter)
+        for epoch in range(config.epoch):
+            data = glob(os.path.join(config.dataset, "*.png"))
+            batch_idxs = min(len(data), config.train_size) // self.batch_size
 
-          # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-          _, summary_str = self.sess.run([g_optim, self.g_sum],
-            feed_dict={ self.z: batch_z, self.y:batch_labels })
-          self.writer.add_summary(summary_str, counter)
-          
-          errD_fake = self.d_loss_fake.eval({
-              self.z: batch_z, 
-              self.y:batch_labels
-          })
-          errD_real = self.d_loss_real.eval({
-              self.inputs: batch_images,
-              self.y:batch_labels
-          })
-          errG = self.g_loss.eval({
-              self.z: batch_z,
-              self.y: batch_labels
-          })
-        else:
-          # Update D network
-          _, summary_str = self.sess.run([d_optim, self.d_sum],
-            feed_dict={ self.inputs: batch_images, self.z: batch_z })
-          self.writer.add_summary(summary_str, counter)
+            for idx in range(0, batch_idxs):
+                batch_files = data[idx*config.batch_size:(idx+1)*config.batch_size]
+                batch = [get_image(batch_file, self.image_size, is_crop=self.is_crop)
+                            for batch_file in batch_files]
+                batch_images = np.array(batch).astype(np.float32)
 
-          # Update G network
-          _, summary_str = self.sess.run([g_optim, self.g_sum],
-            feed_dict={ self.z: batch_z })
-          self.writer.add_summary(summary_str, counter)
+                batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
+                            .astype(np.float32)
 
-          # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-          _, summary_str = self.sess.run([g_optim, self.g_sum],
-            feed_dict={ self.z: batch_z })
-          self.writer.add_summary(summary_str, counter)
-          
-          errD_fake = self.d_loss_fake.eval({ self.z: batch_z })
-          errD_real = self.d_loss_real.eval({ self.inputs: batch_images })
-          errG = self.g_loss.eval({self.z: batch_z})
+                # Update D network
+                _, summary_str = self.sess.run([d_optim, self.d_sum],
+                    feed_dict={ self.images: batch_images, self.z: batch_z })
+                self.writer.add_summary(summary_str, counter)
 
-        counter += 1
-        print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
-          % (epoch, idx, batch_idxs,
-            time.time() - start_time, errD_fake+errD_real, errG))
+                # Update G network
+                _, summary_str = self.sess.run([g_optim, self.g_sum],
+                    feed_dict={ self.z: batch_z })
+                self.writer.add_summary(summary_str, counter)
 
-        if np.mod(counter, 100) == 1:
-          if config.dataset == 'mnist':
-            samples, d_loss, g_loss = self.sess.run(
-              [self.sampler, self.d_loss, self.g_loss],
-              feed_dict={
-                  self.z: sample_z,
-                  self.inputs: sample_inputs,
-                  self.y:sample_labels,
-              }
-            )
-            manifold_h = int(np.ceil(np.sqrt(samples.shape[0])))
-            manifold_w = int(np.floor(np.sqrt(samples.shape[0])))
-            save_images(samples, [manifold_h, manifold_w],
-                  './{}/train_{:02d}_{:04d}.png'.format(config.sample_dir, epoch, idx))
-            print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss)) 
-          else:
-            try:
-              samples, d_loss, g_loss = self.sess.run(
-                [self.sampler, self.d_loss, self.g_loss],
-                feed_dict={
-                    self.z: sample_z,
-                    self.inputs: sample_inputs,
-                },
-              )
-              manifold_h = int(np.ceil(np.sqrt(samples.shape[0])))
-              manifold_w = int(np.floor(np.sqrt(samples.shape[0])))
-              save_images(samples, [manifold_h, manifold_w],
-                    './{}/train_{:02d}_{:04d}.png'.format(config.sample_dir, epoch, idx))
-              print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss)) 
-            except:
-              print("one pic error!...")
+                # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
+                _, summary_str = self.sess.run([g_optim, self.g_sum],
+                    feed_dict={ self.z: batch_z })
+                self.writer.add_summary(summary_str, counter)
 
-        if np.mod(counter, 500) == 2:
-          self.save(config.checkpoint_dir, counter)
+                errD_fake = self.d_loss_fake.eval({self.z: batch_z})
+                errD_real = self.d_loss_real.eval({self.images: batch_images})
+                errG = self.g_loss.eval({self.z: batch_z})
+
+                counter += 1
+                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
+                    % (epoch, idx, batch_idxs,
+                        time.time() - start_time, errD_fake+errD_real, errG))
+
+                if np.mod(counter, 100) == 1:
+                    samples, d_loss, g_loss = self.sess.run(
+                        [self.sampler, self.d_loss, self.g_loss],
+                        feed_dict={self.z: sample_z, self.images: sample_images}
+                    )
+                    save_images(samples, [8, 8],
+                                './samples/train_{:02d}_{:04d}.png'.format(epoch, idx))
+                    print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
+
+                if np.mod(counter, 500) == 2:
+                    self.save(config.checkpoint_dir, counter)
+
 
   def discriminator(self, image, y=None, reuse=False):
     with tf.variable_scope("discriminator") as scope:
