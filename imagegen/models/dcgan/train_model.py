@@ -1,8 +1,6 @@
 # Original Version: Taehoon Kim (http://carpedm20.github.io)
-#   + Source: https://raw.githubusercontent.com/carpedm20/DCGAN-tensorflow/master/model.py
-#   + License: MIT
-# [2017-04-23] Modifications for image inpainting: Zack Soliman
-#   + License: MIT
+# Source: https://raw.githubusercontent.com/carpedm20/DCGAN-tensorflow/master/model.py
+# Modifications for image inpainting: Zack Soliman
 
 import os
 import scipy.misc
@@ -30,8 +28,8 @@ if not os.path.exists(FLAGS.checkpoint_dir):
 if not os.path.exists(FLAGS.sample_dir):
     os.makedirs(FLAGS.sample_dir)
 
-#config = tf.ConfigProto()
-#config.gpu_options.allow_growth = True
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
 with tf.Session() as sess:
     dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size,
                   is_crop=True, checkpoint_dir=FLAGS.checkpoint_dir)

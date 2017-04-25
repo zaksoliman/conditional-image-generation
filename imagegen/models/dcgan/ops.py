@@ -1,8 +1,6 @@
 # Original Version: Taehoon Kim (http://carpedm20.github.io)
-#   + Source: https://raw.githubusercontent.com/carpedm20/DCGAN-tensorflow/master/model.py
-#   + License: MIT
-# [2017-04-23] Modifications for image inpainting: Zack Soliman
-#   + License: MIT
+# Source: https://raw.githubusercontent.com/carpedm20/DCGAN-tensorflow/master/model.py
+# Modifications for image inpainting: Zack Soliman
 
 import math
 import numpy as np

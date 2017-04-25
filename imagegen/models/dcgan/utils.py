@@ -1,12 +1,8 @@
 # Original Version: Taehoon Kim (http://carpedm20.github.io)
-#   + Source: https://raw.githubusercontent.com/carpedm20/DCGAN-tensorflow/master/model.py
-#   + License: MIT
-# [2017-04-23] Modifications for image inpainting: Zack Soliman
-#   + License: MIT
+# Source: https://raw.githubusercontent.com/carpedm20/DCGAN-tensorflow/master/model.py
+# Modifications for image inpainting: Zack Soliman
 
-"""
-Some codes from https://github.com/Newmu/dcgan_code
-"""
+#Some codes from https://github.com/Newmu/dcgan_code
 from __future__ import division
 import math
 import json
