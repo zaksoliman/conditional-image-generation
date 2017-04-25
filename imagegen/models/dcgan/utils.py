@@ -1,5 +1,7 @@
 # Original Version: Taehoon Kim (http://carpedm20.github.io)
-#   + Source: https://github.com/carpedm20/DCGAN-tensorflow/blob/e30539fb5e20d5a0fed40935853da97e9e55eee8/utils.py
+#   + Source: https://raw.githubusercontent.com/carpedm20/DCGAN-tensorflow/master/model.py
+#   + License: MIT
+# [2017-04-23] Modifications for image inpainting: Zack Soliman
 #   + License: MIT
 
 """
@@ -13,13 +15,26 @@ import pprint
 import scipy.misc
 import numpy as np
 from time import gmtime, strftime
+import os
+import pickle as pkl
+import glob
+import PIL.Image as Image
 
 pp = pprint.PrettyPrinter()
 
 get_stddev = lambda x, k_h, k_w: 1/math.sqrt(k_w*k_h*x.get_shape()[-1])
 
-def get_image(image_path, image_size, is_crop=True):
-    return transform(imread(image_path), image_size, is_crop)
+datasets_path = "../../../dataset/coco/"
+
+train_path = os.join(datasets_path, "train2014")
+vaild_path = os.join(datasets_path, "val2014")
+
+def load_images(img_list):
+    """Returns normalized batch"""
+    sample = [np.array(Image.open(sample_file)) for sample_file in img_list]
+    batch = np.array(sample).astype(np.float32)
+
+    return (2.* batch)/255. - 1.
 
 def save_images(images, size, image_path):
     return imsave(inverse_transform(images), size, image_path)
@@ -29,6 +44,7 @@ def imread(path):
 
 def merge_images(images, size):
     return inverse_transform(images)
+
 
 def merge(images, size):
     h, w = images.shape[1], images.shape[2]
