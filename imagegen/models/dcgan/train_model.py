@@ -28,8 +28,8 @@ if not os.path.exists(FLAGS.checkpoint_dir):
 if not os.path.exists(FLAGS.sample_dir):
     os.makedirs(FLAGS.sample_dir)
 
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
+#config = tf.ConfigProto()
+#config.gpu_options.allow_growth = True
 with tf.Session() as sess:
     dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size,
                   is_crop=True, checkpoint_dir=FLAGS.checkpoint_dir)
