@@ -163,7 +163,7 @@ class DCGAN(object):
         if self.z_dist == "uniform":
             sample_z = np.random.uniform(-1, 1, size=(self.sample_size , self.z_dim))
         elif self.z_dist == "gaussian":
-            sample_z = tf.random_normal(shape=(self.sample_size, self.z_dim))
+            sample_z = np.random.normal(size=(self.sample_size, self.z_dim))
 
         sample_files = data[0:self.sample_size]
         sample = load_images(sample_files)
@@ -189,7 +189,7 @@ class DCGAN(object):
                     batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
                                 .astype(np.float32)
                 elif self.z_dist == "gaussian":
-                    batch_z = tf.random_normal(shape=(config.batch_size, self.z_dim))
+                    batch_z = np.random.normal(size=(config.batch_size, self.z_dim))
 
                 # Update D network
                 _, summary_str = self.sess.run([d_optim, self.d_sum],
