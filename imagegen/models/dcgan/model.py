@@ -20,8 +20,8 @@ SummaryWriter = tf.summary.FileWriter
 class DCGAN(object):
     def __init__(self, sess, image_size=64, is_crop=True, batch_size=64,
             sample_size = 64, output_height=64, output_width=64, y_dim=None,
-            z_dim=100, gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024, c_dim=3, 
-            dataset_name='default', checkpoint_dir=None, sample_dir=None):
+            z_dim=100, gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024, c_dim=3,
+            dataset_name='default', z_dist="gaussian", checkpoint_dir=None, sample_dir=None):
         """
         Args:
             sess: TensorFlow session
@@ -37,6 +37,7 @@ class DCGAN(object):
         self.sess = sess
         self.is_crop = is_crop
         self.model_name = "DCGAN.model"
+        self.z_dist = z_dist
 
         self.batch_size = batch_size
         self.sample_size = sample_size
@@ -110,7 +111,7 @@ class DCGAN(object):
 
         self.d_sum = histogram_summary("d", self.D)
         self.d__sum = histogram_summary("d_", self.D_)
-        self.G_sum = image_summary("G", self.G)
+        self.G_sum = image_summary("G", self.G, max_outputs=10)
 
         def sigmoid_cross_entropy_with_logits(x, y):
             try:
@@ -159,7 +160,11 @@ class DCGAN(object):
             [self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
         self.writer = SummaryWriter("./logs", self.sess.graph)
 
-        sample_z = np.random.uniform(-1, 1, size=(self.sample_size , self.z_dim))
+        if self.z_dist == "uniform":
+            sample_z = np.random.uniform(-1, 1, size=(self.sample_size , self.z_dim))
+        elif self.z_dist == "gaussian":
+            sample_z = tf.random_normal(shape=(self.sample_size, self.z_dim))
+
         sample_files = data[0:self.sample_size]
         sample = load_images(sample_files)
         sample_images = np.array(sample).astype(np.float32)
@@ -180,8 +185,11 @@ class DCGAN(object):
                 batch_files = data[idx*config.batch_size:(idx+1)*config.batch_size]
                 batch = load_images(batch_files)
 
-                batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
-                            .astype(np.float32)
+                if self.z_dist == "uniform":
+                    batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
+                                .astype(np.float32)
+                elif self.z_dist == "gaussian":
+                    batch_z = tf.random_normal(shape=(config.batch_size, self.z_dim]))
 
                 # Update D network
                 _, summary_str = self.sess.run([d_optim, self.d_sum],
