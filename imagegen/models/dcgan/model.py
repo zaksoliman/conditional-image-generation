@@ -18,7 +18,7 @@ merge_summary = tf.summary.merge
 SummaryWriter = tf.summary.FileWriter
 
 class DCGAN(object):
-    def __init__(self, sess, image_size=64, batch_size=64, l_param=0.1
+    def __init__(self, sess, image_size=64, batch_size=64, l_param=0.1,
             sample_size = 64, y_dim=None, z_dim=100, gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024, c_dim=3,
             dataset_name='default', z_dist="gaussian", checkpoint_dir=None, sample_dir=None):
         """
@@ -380,44 +380,44 @@ class DCGAN(object):
         elif self.z_dist == "uniform":
             z_hats = np.random.uniform(-1,1, size=(len(img_files), self.z_dim))
 
-	n_rows = 8
-	n_cols = 8
-	save_images(imgs, [nRows,nCols], os.path.join(config.out_dir, 'before.png'))
-	masked_images = np.multiply(mask, imgs)
-	save_images(masked_images, [n_rows,n_cols],os.path.join(config.out_dir, 'masked.png'))
+        n_rows = 8
+        n_cols = 8
+        save_images(imgs, [nRows,nCols], os.path.join(config.out_dir, 'before.png'))
+        masked_images = np.multiply(mask, imgs)
+        save_images(masked_images, [n_rows,n_cols],os.path.join(config.out_dir, 'masked.png'))
 
-	# Optimize
-	v = 0
+        # Optimize
+        v = 0
 
         for i in range(config.n_iter):
             # Setting inputs
             feed = {
-                self.z: z_hats,
-		self.mask: mask,
-		self.images: imgs,
-	    }
+            self.z: z_hats,
+            self.mask: mask,
+            self.images: imgs,
+            }
 
-	    run = [self.complete_loss, self.grad_complete_loss, self.G]
-	    loss, g, G_imgs = self.sess.run(run, feed_dict=fd)
+            run = [self.complete_loss, self.grad_complete_loss, self.G]
+            loss, g, G_imgs = self.sess.run(run, feed_dict=fd)
 
-	    v_prev = np.copy(v)
-	    v = config.momentum*v - config.lr*g[0]
-	    zhats += -config.momentum * v_prev + (1+config.momentum)*v
+            v_prev = np.copy(v)
+            v = config.momentum*v - config.lr*g[0]
+            zhats += -config.momentum * v_prev + (1+config.momentum)*v
 
             if self.z_dist == "uniform":
                 zhats = np.clip(z_hats, -1, 1)
 
-	if i % 50 == 0:
-	    print(i, np.mean(loss))
-	    img_name = os.path.join(config.out_dir, 'generated_imgs/{:04d}.png'.format(i))
-	    n_rows = 8
-	    n_cols = 8
-	    save_images(G_imgs, [n_rows,n_cols], img_name)
+            if i % 50 == 0:
+                print(i, np.mean(loss))
+                img_name = os.path.join(config.out_dir, 'generated_imgs/{:04d}.png'.format(i))
+                n_rows = 8
+                n_cols = 8
+                save_images(G_imgs, [n_rows,n_cols], img_name)
 
-	    inv_masked_hat_images = np.multiply(1.0-mask, G_imgs)
-	    filled = masked_images + inv_masked_hat_images
-	    img_name = os.path.join(config.out_dir,'filled/{:04d}.png'.format(i))
-	    save_images(filled, [n_rows,n_cols], img_name)
+                inv_masked_hat_images = np.multiply(1.0-mask, G_imgs)
+                filled = masked_images + inv_masked_hat_images
+                img_name = os.path.join(config.out_dir,'filled/{:04d}.png'.format(i))
+                save_images(filled, [n_rows,n_cols], img_name)
 
 
     def save(self, checkpoint_dir, step):
