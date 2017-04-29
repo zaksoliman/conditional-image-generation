@@ -21,6 +21,7 @@ flags.DEFINE_integer("image_size", 64, "The size of image to use")
 flags.DEFINE_string("dataset", "../../../datasets/coco/train2014", "Dataset directory.")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
+flags.DEFINE_string("z_dist", "gaussian", "Distribution to sample noise from [gaussian]")
 FLAGS = flags.FLAGS
 
 if not os.path.exists(FLAGS.checkpoint_dir):
@@ -28,9 +29,9 @@ if not os.path.exists(FLAGS.checkpoint_dir):
 if not os.path.exists(FLAGS.sample_dir):
     os.makedirs(FLAGS.sample_dir)
 
-#config = tf.ConfigProto()
-#config.gpu_options.allow_growth = True
-with tf.Session() as sess:
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+with tf.Session(config=config) as sess:
     dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size,
                   is_crop=True, checkpoint_dir=FLAGS.checkpoint_dir)
 

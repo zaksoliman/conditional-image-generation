@@ -111,7 +111,7 @@ class DCGAN(object):
 
         self.d_sum = histogram_summary("d", self.D)
         self.d__sum = histogram_summary("d_", self.D_)
-        self.G_sum = image_summary("G", self.G, max_outputs=10)
+        self.G_sum = image_summary("G", self.G, max_outputs=30)
 
         def sigmoid_cross_entropy_with_logits(x, y):
             try:
@@ -186,9 +186,11 @@ class DCGAN(object):
                 batch = load_images(batch_files)
 
                 if self.z_dist == "uniform":
+                    print("Sampling z from uniform")
                     batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
                                 .astype(np.float32)
                 elif self.z_dist == "gaussian":
+                    print("Sampling z from gaussian")
                     batch_z = np.random.normal(size=(config.batch_size, self.z_dim))
 
                 # Update D network
@@ -302,7 +304,7 @@ class DCGAN(object):
 
                 h1 = conv_cond_concat(h1, yb)
 
-                h2 = tf.nn.relu(self.g_bn2(conv2s_transpose(h1,
+                h2 = tf.nn.relu(self.g_bn2(conv2d_transpose(h1,
                     [self.batch_size, s_h2, s_w2, self.gf_dim * 2], name='g_h2')))
                 h2 = conv_cond_concat(h2, yb)
 
