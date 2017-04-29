@@ -120,13 +120,15 @@ class DCGAN(object):
 
         self.d_loss = self.d_loss_real + self.d_loss_fake
 
+        # Mask
+        self.mask = tf.placeholder(tf.float32, [self.image_size, self.image_size], name='mask')
         # Contextual loss
-        l1_norm = tf.reduce_max(tf.reduce_sum(tf.abs(tf.mul(self.mask, self.G) - tf.mul(self.mask, self.inputs)), 1), 0)
-        self.context.loss = l1_norm
+        l1_norm = tf.reduce_max(tf.reduce_sum(tf.abs(tf.multiply(self.mask, self.G) - tf.multiply(self.mask, self.inputs)), 1), 0)
+        self.context_loss = l1_norm
         # Perceptual loss
         self.perceptual_loss = self.g_loss
 
-        self.complete_loss = self.contextual_loss + self.l_param*self.perceptual_loss
+        self.complete_loss = self.context_loss + self.l_param*self.perceptual_loss
         self.grad_complete_loss = tf.gradients(self.complete_loss, self.z)
 
         self.g_loss_sum = scalar_summary("g_loss", self.g_loss)
@@ -352,6 +354,60 @@ class DCGAN(object):
                 h2 = conv_cond_concat(h2, yb)
 
                 return tf.nn.sigmoid(conv2d_transpose(h2, [self.batch_size, s_h, s_w, self.c_dim], name='g_h3'))
+
+    def fill(self, config):
+        """
+        Run on randomly chosen set of 64 test images
+        """
+        tf.initialize_all_variables().run()
+
+        os.makedirs(os.path.join(config.outDir, 'generated_imgs'), exist_ok=True)
+        os.makedirs(os.path.join(config.outDir, 'filled'), exist_ok=True)
+
+        if self.load(self.checkpoint_dir):
+            print("[*] Loaded checkpoint")
+        else:
+            print("[!] Failed to load checkpoints.. Train model first")
+
+        img_files = glob(os.path.join(config.dataset, "*.jpg"))
+        imgs = load_images(img_files)
+        #nBatches = int(np.ceil(len(data)/self.batch_size))
+
+        mask = np.ones(shape=(self.image_size, self.image_size))
+        mask[16:48, 16:48, :] = 0.0
+
+        if self.z_dist == "gaussian":
+            z_hats = np.random.normal(size=(len(img_files), self.z_dim))
+        elif self.z_dist == "uniform":
+            z_hats = np.random.uniform(-1,1, size=(len(img_files), self.z_dim))
+
+	nRows = 8
+	nCols = 8
+	save_images(imgs, [nRows,nCols], os.path.join(config.outDir, 'before.png'))
+	masked_images = np.multiply(mask, imgs)
+	save_images(masked_images, [Rows,nCols],os.path.join(config.outDir, 'masked.png'))
+
+	# Optimize
+	v = 0
+	for i in range(config.nIter):
+            # Setting inputs
+            feed = {
+		self.z: z_hats,
+		self.mask: mask,
+		self.images: imgs,
+	    }
+
+	    run = [self.complete_loss, self.grad_complete_loss, self.G]
+	    loss, g, G_imgs = self.sess.run(run, feed_dict=fd)
+
+	    v_prev = np.copy(v)
+	    v = config.momentum*v - config.lr*g[0]
+	    zhats += -config.momentum * v_prev + (1+config.momentum)*v
+
+            if self.z_dist == "uniform":
+                zhats = np.clip(z_hats, -1, 1)
+
+
 
     def save(self, checkpoint_dir, step):
         if not os.path.exists(checkpoint_dir):
