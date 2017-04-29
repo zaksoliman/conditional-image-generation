@@ -371,7 +371,6 @@ class DCGAN(object):
 
         img_files = glob(os.path.join(config.dataset, "*.jpg"))
         imgs = load_images(img_files)
-        #nBatches = int(np.ceil(len(data)/self.batch_size))
 
         mask = np.ones(shape=(self.image_size, self.image_size))
         mask[16:48, 16:48, :] = 0.0
@@ -381,18 +380,19 @@ class DCGAN(object):
         elif self.z_dist == "uniform":
             z_hats = np.random.uniform(-1,1, size=(len(img_files), self.z_dim))
 
-	nRows = 8
-	nCols = 8
+	n_rows = 8
+	n_cols = 8
 	save_images(imgs, [nRows,nCols], os.path.join(config.outDir, 'before.png'))
 	masked_images = np.multiply(mask, imgs)
-	save_images(masked_images, [Rows,nCols],os.path.join(config.outDir, 'masked.png'))
+	save_images(masked_images, [n_rows,n_cols],os.path.join(config.outDir, 'masked.png'))
 
 	# Optimize
 	v = 0
-	for i in range(config.nIter):
+
+        for i in range(config.nIter):
             # Setting inputs
             feed = {
-		self.z: z_hats,
+                self.z: z_hats,
 		self.mask: mask,
 		self.images: imgs,
 	    }
@@ -407,6 +407,17 @@ class DCGAN(object):
             if self.z_dist == "uniform":
                 zhats = np.clip(z_hats, -1, 1)
 
+	if i % 50 == 0:
+	    print(i, np.mean(loss))
+	    img_name = os.path.join(config.outDir, 'generated_imgs/{:04d}.png'.format(i))
+	    n_rows = 8
+	    n_cols = 8
+	    save_images(G_imgs, [n_rows,n_cols], img_name)
+
+	    inv_masked_hat_images = np.multiply(1.0-mask, G_imgs)
+	    filled = masked_images + inv_masked_hat_images
+	    img_name = os.path.join(config.outDir,'filled/{:04d}.png'.format(i))
+	    save_images(filled, [n_rows,n_cols], img_name)
 
 
     def save(self, checkpoint_dir, step):
@@ -416,6 +427,7 @@ class DCGAN(object):
         self.saver.save(self.sess,
                         os.path.join(checkpoint_dir, self.model_name),
                         global_step=step)
+
 
     def load(self, checkpoint_dir):
         print(" [*] Reading checkpoints...")
