@@ -18,9 +18,8 @@ merge_summary = tf.summary.merge
 SummaryWriter = tf.summary.FileWriter
 
 class DCGAN(object):
-    def __init__(self, sess, image_size=64, is_crop=True, batch_size=64,
-            sample_size = 64, output_height=64, output_width=64, y_dim=None,
-            z_dim=100, gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024, c_dim=3,
+    def __init__(self, sess, image_size=64, batch_size=64, l_param=0.1
+            sample_size = 64, y_dim=None, z_dim=100, gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024, c_dim=3,
             dataset_name='default', z_dist="gaussian", checkpoint_dir=None, sample_dir=None):
         """
         Args:
@@ -33,29 +32,22 @@ class DCGAN(object):
             gfc_dim: (optional) Dimension of gen units for for fully connected layer. [1024]
             dfc_dim: (optional) Dimension of discrim units for fully connected layer. [1024]
             c_dim: (optional) Dimension of image color. For grayscale input, set to 1. [3]
+            l_param: (optional) weighting parameter for inpainting loss
         """
         self.sess = sess
-        self.is_crop = is_crop
         self.model_name = "DCGAN.model"
         self.z_dist = z_dist
-
         self.batch_size = batch_size
         self.sample_size = sample_size
-
         self.image_size = image_size
-        self.output_height = output_height
-        self.output_width = output_width
-
         self.y_dim = y_dim
         self.z_dim = z_dim
-
         self.gf_dim = gf_dim
         self.df_dim = df_dim
-
         self.gfc_dim = gfc_dim
         self.dfc_dim = dfc_dim
-
         self.c_dim = c_dim
+        self.l_param = l_param
 
         # batch normalization : deals with poor initialization helps gradient flow
         self.d_bn1 = batch_norm(name='d_bn1')
@@ -79,10 +71,7 @@ class DCGAN(object):
         if self.y_dim:
             self.y= tf.placeholder(tf.float32, [self.batch_size, self.y_dim], name='y')
 
-        if self.is_crop:
-            image_dims = [self.output_height, self.output_width, self.c_dim]
-        else:
-            image_dims = [self.input_height, self.input_width, self.c_dim]
+        image_dims = [self.input_height, self.input_width, self.c_dim]
 
         self.inputs = tf.placeholder(
             tf.float32, [self.batch_size] + image_dims, name='real_images')
@@ -130,6 +119,15 @@ class DCGAN(object):
         self.d_loss_fake_sum = scalar_summary("d_loss_fake", self.d_loss_fake)
 
         self.d_loss = self.d_loss_real + self.d_loss_fake
+
+        # Contextual loss
+        l1_norm = tf.reduce_max(tf.reduce_sum(tf.abs(tf.mul(self.mask, self.G) - tf.mul(self.mask, self.inputs)), 1), 0)
+        self.context.loss = l1_norm
+        # Perceptual loss
+        self.perceptual_loss = self.g_loss
+
+        self.complete_loss = self.contextual_loss + self.l_param*self.perceptual_loss
+        self.grad_complete_loss = tf.gradients(self.complete_loss, self.z)
 
         self.g_loss_sum = scalar_summary("g_loss", self.g_loss)
         self.d_loss_sum = scalar_summary("d_loss", self.d_loss)
