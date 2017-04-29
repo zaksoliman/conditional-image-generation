@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 *.tar.gz
 *.zip
+imagegen/models/dcgan/models/
+
 # C extensions
 *.so
 *.ipynb
