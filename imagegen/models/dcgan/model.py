@@ -361,8 +361,8 @@ class DCGAN(object):
         """
         tf.initialize_all_variables().run()
 
-        os.makedirs(os.path.join(config.outDir, 'generated_imgs'), exist_ok=True)
-        os.makedirs(os.path.join(config.outDir, 'filled'), exist_ok=True)
+        os.makedirs(os.path.join(config.out_dir, 'generated_imgs'), exist_ok=True)
+        os.makedirs(os.path.join(config.out_dir, 'filled'), exist_ok=True)
 
         if self.load(self.checkpoint_dir):
             print("[*] Loaded checkpoint")
@@ -382,14 +382,14 @@ class DCGAN(object):
 
 	n_rows = 8
 	n_cols = 8
-	save_images(imgs, [nRows,nCols], os.path.join(config.outDir, 'before.png'))
+	save_images(imgs, [nRows,nCols], os.path.join(config.out_dir, 'before.png'))
 	masked_images = np.multiply(mask, imgs)
-	save_images(masked_images, [n_rows,n_cols],os.path.join(config.outDir, 'masked.png'))
+	save_images(masked_images, [n_rows,n_cols],os.path.join(config.out_dir, 'masked.png'))
 
 	# Optimize
 	v = 0
 
-        for i in range(config.nIter):
+        for i in range(config.n_iter):
             # Setting inputs
             feed = {
                 self.z: z_hats,
@@ -409,14 +409,14 @@ class DCGAN(object):
 
 	if i % 50 == 0:
 	    print(i, np.mean(loss))
-	    img_name = os.path.join(config.outDir, 'generated_imgs/{:04d}.png'.format(i))
+	    img_name = os.path.join(config.out_dir, 'generated_imgs/{:04d}.png'.format(i))
 	    n_rows = 8
 	    n_cols = 8
 	    save_images(G_imgs, [n_rows,n_cols], img_name)
 
 	    inv_masked_hat_images = np.multiply(1.0-mask, G_imgs)
 	    filled = masked_images + inv_masked_hat_images
-	    img_name = os.path.join(config.outDir,'filled/{:04d}.png'.format(i))
+	    img_name = os.path.join(config.out_dir,'filled/{:04d}.png'.format(i))
 	    save_images(filled, [n_rows,n_cols], img_name)
 
 
