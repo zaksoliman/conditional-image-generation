@@ -18,7 +18,7 @@ merge_summary = tf.summary.merge
 SummaryWriter = tf.summary.FileWriter
 
 class DCGAN(object):
-    def __init__(self, sess, image_size=64, batch_size=64, l_param=0.1,
+    def __init__(self, sess, image_size=64, batch_size=64, l_param=0.1, input_height=64, input_width=64,
             sample_size = 64, y_dim=None, z_dim=100, gf_dim=64, df_dim=64, gfc_dim=1024, dfc_dim=1024, c_dim=3,
             dataset_name='default', z_dist="gaussian", checkpoint_dir=None, sample_dir=None):
         """
@@ -48,6 +48,8 @@ class DCGAN(object):
         self.dfc_dim = dfc_dim
         self.c_dim = c_dim
         self.l_param = l_param
+        self.input_height = input_height
+        self.input_width = input_width
 
         # batch normalization : deals with poor initialization helps gradient flow
         self.d_bn1 = batch_norm(name='d_bn1')
@@ -121,7 +123,7 @@ class DCGAN(object):
         self.d_loss = self.d_loss_real + self.d_loss_fake
 
         # Mask
-        self.mask = tf.placeholder(tf.float32, [self.image_size, self.image_size], name='mask')
+        self.mask = tf.placeholder(tf.float32, [self.image_size, self.image_size, self.c_dim], name='mask')
         # Contextual loss
         l1_norm = tf.reduce_max(tf.reduce_sum(tf.abs(tf.multiply(self.mask, self.G) - tf.multiply(self.mask, self.inputs)), 1), 0)
         self.context_loss = l1_norm
@@ -359,8 +361,7 @@ class DCGAN(object):
         """
         Run on randomly chosen set of 64 test images
         """
-        tf.initialize_all_variables().run()
-
+        tf.global_variables_initializer().run()
         os.makedirs(os.path.join(config.out_dir, 'generated_imgs'), exist_ok=True)
         os.makedirs(os.path.join(config.out_dir, 'filled'), exist_ok=True)
 
@@ -372,7 +373,7 @@ class DCGAN(object):
         img_files = glob(os.path.join(config.dataset, "*.jpg"))
         imgs = load_images(img_files)
 
-        mask = np.ones(shape=(self.image_size, self.image_size))
+        mask = np.ones(shape=(self.image_size, self.image_size, self.c_dim))
         mask[16:48, 16:48, :] = 0.0
 
         if self.z_dist == "gaussian":
@@ -382,7 +383,7 @@ class DCGAN(object):
 
         n_rows = 8
         n_cols = 8
-        save_images(imgs, [nRows,nCols], os.path.join(config.out_dir, 'before.png'))
+        save_images(imgs, [n_rows,n_cols], os.path.join(config.out_dir, 'before.png'))
         masked_images = np.multiply(mask, imgs)
         save_images(masked_images, [n_rows,n_cols],os.path.join(config.out_dir, 'masked.png'))
 
@@ -394,15 +395,15 @@ class DCGAN(object):
             feed = {
             self.z: z_hats,
             self.mask: mask,
-            self.images: imgs,
+            self.inputs: imgs,
             }
 
             run = [self.complete_loss, self.grad_complete_loss, self.G]
-            loss, g, G_imgs = self.sess.run(run, feed_dict=fd)
+            loss, g, G_imgs = self.sess.run(run, feed_dict=feed)
 
             v_prev = np.copy(v)
             v = config.momentum*v - config.lr*g[0]
-            zhats += -config.momentum * v_prev + (1+config.momentum)*v
+            z_hats += -config.momentum * v_prev + (1+config.momentum)*v
 
             if self.z_dist == "uniform":
                 zhats = np.clip(z_hats, -1, 1)

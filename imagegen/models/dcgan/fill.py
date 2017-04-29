@@ -18,16 +18,16 @@ flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image s
 flags.DEFINE_string("z_dist", "gaussian", "Distribution to sample noise from [gaussian]")
 flags.DEFINE_float('lr', 0.01, "Learning rate for optimizing the inpainting loss [0.01]")
 flags.DEFINE_float('momentum',0.9, "Momentum for optimization of inpainting loss [0.9]")
-flags.DEFINE_integer('n_iter', 1000)
+flags.DEFINE_integer('n_iter', 1000, "Number of iterations for optimization of inpainting loss [100]")
 flags.DEFINE_float('l_param', 0.1,"Weighting parameter for inpainting loss [0.1]")
-flags.DEFINE_string('out_dir', 'inpainting')
+flags.DEFINE_string('out_dir', 'inpainting', "Ouput directory for reconstructed images")
 FLAGS = flags.FLAGS
 
-assert(os.path.exists(args.checkpointDir))
+assert(os.path.exists(FLAGS.checkpoint_dir))
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 with tf.Session(config=config) as sess:
     dcgan = DCGAN(sess, image_size=FLAGS.image_size, z_dist=FLAGS.z_dist, checkpoint_dir=FLAGS.checkpoint_dir,
             l_param=FLAGS.l_param)
-    dcgan.complete(FLAGS)
+    dcgan.fill(FLAGS)
