@@ -125,8 +125,9 @@ class DCGAN(object):
         # Mask
         self.mask = tf.placeholder(tf.float32, [self.image_size, self.image_size, self.c_dim], name='mask')
         # Contextual loss
-        l1_norm = tf.reduce_max(tf.reduce_sum(tf.abs(tf.multiply(self.mask, self.G) - tf.multiply(self.mask, self.inputs)), 1), 0)
+        l1_norm = tf.reduce_sum(tf.contrib.layers.flatten(tf.abs(tf.mul(self.mask, self.G) - tf.mul(self.mask, self.images))), 1)
         self.context_loss = l1_norm
+        tf.reduce_sum(tf.contrib.layers.flatten(tf.abs(tf.mul(self.mask, self.G) - tf.mul(self.mask, self.images))), 1)
         # Perceptual loss
         self.perceptual_loss = self.g_loss
 
@@ -420,7 +421,6 @@ class DCGAN(object):
                 img_name = os.path.join(config.out_dir,'filled/{:04d}.png'.format(i))
                 save_images(filled, [n_rows,n_cols], img_name)
 
-
     def save(self, checkpoint_dir, step):
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
@@ -428,7 +428,6 @@ class DCGAN(object):
         self.saver.save(self.sess,
                         os.path.join(checkpoint_dir, self.model_name),
                         global_step=step)
-
 
     def load(self, checkpoint_dir):
         print(" [*] Reading checkpoints...")
