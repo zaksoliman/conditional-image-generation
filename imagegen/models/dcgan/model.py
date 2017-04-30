@@ -125,7 +125,7 @@ class DCGAN(object):
         # Mask
         self.mask = tf.placeholder(tf.float32, [self.image_size, self.image_size, self.c_dim], name='mask')
         # Contextual loss
-        l1_norm = tf.reduce_sum(tf.contrib.layers.flatten(tf.abs(tf.multiply(self.mask, self.G) - tf.multiply(self.mask, self.images))), 1)
+        l1_norm = tf.reduce_sum(tf.contrib.layers.flatten(tf.abs(tf.multiply(self.mask, self.G) - tf.multiply(self.mask, self.inputs))), 1)
         self.context_loss = l1_norm
         # Perceptual loss
         self.perceptual_loss = self.g_loss
